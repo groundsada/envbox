@@ -1,48 +1,24 @@
-# envbox
+# envbox (Read-Only Volume Fix)
 
 ## Introduction
 
-`envbox` is an image that enables creating non-privileged containers capable of running system-level software (e.g. `dockerd`, `systemd`, etc) in Kubernetes.
+`envbox` is an image created to address a specific issue related to remounting read-only volumes, particularly when using non-orthodox volumes like CVMFS and SeaweedFS. The motivation for this fork stems from a problem encountered in a Kubernetes deployment, where the Docker codebase in Go enforced a remount for read-only volumes using an invalid command, causing compatibility issues with non-standard volumes.
 
-It mainly acts as a wrapper for the excellent [sysbox runtime](https://github.com/nestybox/sysbox/) developed by [Nestybox](https://www.nestybox.com/). For more details on the security of `sysbox` containers see sysbox's [official documentation](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/security.md).
-
-## Envbox Configuration
-
-The environment variables can be used to configure various aspects of the inner and outer container.
-
-| env                            | usage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | required |
-|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
-| `CODER_INNER_IMAGE`            | The image to use for the inner container.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | True     |
-| `CODER_INNER_USERNAME`         | The username to use for the inner container.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | True     |
-| `CODER_AGENT_TOKEN`            | The [Coder Agent](https://coder.com/docs/v2/latest/about/architecture#agents) token to pass to the inner container.                                                                                                                                                                                                                                                                                                                                                                                                            | True     |
-| `CODER_INNER_ENVS`             | The environment variables to pass to the inner container. A wildcard can be used to match a prefix. Ex: `CODER_INNER_ENVS=KUBERNETES_*,MY_ENV,MY_OTHER_ENV`                                                                                                                                                                                                                                                                                                                                                                    | false    |
-| `CODER_INNER_HOSTNAME`         | The hostname to use for the inner container.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | false    |
-| `CODER_IMAGE_PULL_SECRET`      | The docker credentials to use when pulling the inner container. The recommended way to do this is to create an [Image Pull Secret](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-secret-by-providing-credentials-on-the-command-line) and then reference the secret using an [environment variable](https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#define-container-environment-variables-using-secret-data). See below for example. | false    |
-| `CODER_DOCKER_BRIDGE_CIDR`     | The bridge CIDR to start the Docker daemon with.                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | false    |
-| `CODER_MOUNTS`                 | A list of mounts to mount into the inner container. Mounts default to `rw`. Ex: `CODER_MOUNTS=/home/coder:/home/coder,/var/run/mysecret:/var/run/mysecret:ro`                                                                                                                                                                                                                                                                                                                                                                  | false    |
-| `CODER_USR_LIB_DIR`            | The mountpoint of the host `/usr/lib` directory. Only required when using GPUs.                                                                                                                                                                                                                                                                                                                                                                                                                                                | false    |
-| `CODER_ADD_TUN`                | If `CODER_ADD_TUN=true` add a TUN device to the inner container.                                                                                                                                                                                                                                                                                                                                                                                                                                                               | false    |
-| `CODER_ADD_FUSE`               | If `CODER_ADD_FUSE=true` add a FUSE device to the inner container.                                                                                                                                                                                                                                                                                                                                                                                                                                                             | false    |
-| `CODER_ADD_GPU`                | If `CODER_ADD_GPU=true` add detected GPUs and related files to the inner container. Requires setting `CODER_USR_LIB_DIR` and mounting in the hosts `/usr/lib/` directory.                                                                                                                                                                                                                                                                                                                                                      | false    |
-| `CODER_CPUS`                   | Dictates the number of CPUs to allocate the inner container. It is recommended to set this using the Kubernetes [Downward API](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#use-container-fields-as-values-for-environment-variables).                                                                                                                                                                                                                                | false    |
-| `CODER_MEMORY`                 | Dictates the max memory (in bytes) to allocate the inner container. It is recommended to set this using the Kubernetes [Downward API](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#use-container-fields-as-values-for-environment-variables).                                                                                                                                                                                                                         | false    |
-| `CODER_DISABLE_IDMAPPED_MOUNT` | Disables idmapped mounts in sysbox. For more information, see the [Sysbox Documentation](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/configuration.md#disabling-id-mapped-mounts-on-sysbox).                                                                                                                                                                                                                                                                                                                | false    |
+The solution provided in this fork is purely written in Go and aims to rectify the remount issue for read-only volumes.
 
 ## Coder Template
 
-A [Coder Template](https://github.com/coder/coder/tree/main/examples/templates/envbox) can be found in the [coder/coder](https://github.com/coder/coder) repo to provide a starting point for customizing an envbox container.
-
-To learn more about Coder Templates refer to the [docs](https://coder.com/docs/v2/latest/templates).
+The primary modification in this fork is to address the read-only volume remount issue. No additional changes are made to the Coder Template.
 
 ## Development
 
-It is not possible to develop `envbox` effectively using a containerized environment (includes developing `envbox` using `envbox`). A VM, personal machine, or similar environment is required to run the [integration](./integration/) test suite.
+To contribute or further develop `envbox`, it is recommended to use a non-containerized environment (VM, personal machine, etc.). This approach is necessary to run the [integration](./integration/) test suite.
 
 ## CODER_IMAGE_PULL_SECRET Kubernetes Example
 
-If a login is required to pull images from a private repository, create a secret following the instructions from the [Kubernetes Documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-secret-by-providing-credentials-on-the-command-line) as such:
+If a login is required to pull images from a private repository, follow the instructions from the [Kubernetes Documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-secret-by-providing-credentials-on-the-command-line) as such:
 
-```
+```bash
 kubectl -n <coder namespace> create secret docker-registry regcred \
         --docker-server=<your-registry-server> \
         --docker-username=<your-name> \
@@ -52,7 +28,7 @@ kubectl -n <coder namespace> create secret docker-registry regcred \
 
 Then reference the secret in your template as such:
 
-```
+```hcl
 env {
   name = "CODER_IMAGE_PULL_SECRET"
   value_from {
@@ -63,3 +39,6 @@ env {
   }
 }
 ```
+
+Please note that the primary focus of this fork is the fix for the remount issue with read-only volumes.
+

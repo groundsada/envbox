@@ -527,7 +527,6 @@ func runDockerCVM(ctx context.Context, log slog.Logger, client dockerutil.Docker
 	}
 
 	for _, m := range mounts {
-		// Don't modify anything private to envbox.
 		if isPrivateMount(m) {
 			continue
 		}
@@ -540,19 +539,19 @@ func runDockerCVM(ctx context.Context, log slog.Logger, client dockerutil.Docker
 		// If a mount is read-only we have to remount it rw so that we
 		// can id shift it correctly. We'll still mount it read-only into
 		// the inner container.
-		if m.ReadOnly {
-			mounter := xunix.Mounter(ctx)
-			err := mounter.Mount("", m.Source, "", []string{"remount,rw"})
-			if err != nil {
-				return xerrors.Errorf("remount: %w", err)
-			}
-		}
-
-		err := fs.Chmod(m.Source, 0o2755)
-		if err != nil {
-			return xerrors.Errorf("chmod mountpoint %q: %w", m.Source, err)
-		}
-
+        //		if m.ReadOnly {
+        //			mounter := xunix.Mounter(ctx)
+        //			err := mounter.Mount("", m.Source, "", []string{"remount,rw"})
+        //			if err != nil {
+        //				return xerrors.Errorf("remount: %w", err)
+        //			}
+        //		}
+        //
+        //		err := fs.Chmod(m.Source, 0o2755)
+        //		if err != nil {
+        //			return xerrors.Errorf("chmod mountpoint %q: %w", m.Source, err)
+        //		}
+        //
 		var (
 			shiftedUID = shiftedID(0)
 			shiftedGID = shiftedID(0)
